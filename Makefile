@@ -1,3 +1,11 @@
+SHELL = /bin/bash
+DEBIAN_CODENAME := $(shell lsb_release -sc)
+
+PIP_CACHE_DIR=/usr/local/src/pip-cache
+VIRTUALENV=/usr/local/src/env/namesdb
+INSTALLDIR=/usr/local/src/namesdb
+
+
 .PHONY: clean-pyc clean-build docs clean
 
 help:
@@ -38,6 +46,7 @@ lint:
 	flake8 namesdb tests
 
 test:
+	source $(VIRTUALENV)/bin/activate; \
 	python setup.py test
 
 test-all:
@@ -67,4 +76,11 @@ docs:
 # 	ls -l dist
 
 install: clean
+# virtualenv
+	test -d $(VIRTUALENV) || virtualenv $(VIRTUALENV)
+	source $(VIRTUALENV)/bin/activate; \
+	pip install -U --download-cache=$(PIP_CACHE_DIR) bpython setuptools
+	source $(VIRTUALENV)/bin/activate; \
+	pip install -U --download-cache=$(PIP_CACHE_DIR) -r $(INSTALLDIR)/requirements.txt
+	source $(VIRTUALENV)/bin/activate; \
 	python setup.py install
