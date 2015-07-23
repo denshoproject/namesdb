@@ -1,0 +1,454 @@
+#!/usr/bin/env python
+
+#
+# names-import
+#
+
+DESCRIPTION = """Loads FAR and WRA records from CSV files and uploads to Elasticsearch."""
+
+SUBPARSER_TITLE = """Subcommands"""
+SUBPARSER_DESCRIPTION = """Additional help is available for each of the following subcommands.
+Example:
+    $ namesdb import --help
+"""
+SUBPARSER_HELP = ''
+
+EPILOG = """
+
+    # Create and destroy indexes
+    $ namesdb create -H localhost:9200 -i namesdb-stage
+    $ namesdb destroy -H localhost:9200 -i namesdb-stage --confirm
+    
+    # Check status
+    $ namesdb status -H localhost:9200 -i namesdb-stage
+    
+    # Import records
+    $ namesdb import -H localhost:9200 -i namesdb-stage /tmp/namesdb-data/far-manzanar.csv
+    
+    # Delete records
+    $ namesdb delete -H localhost:9200 -i namesdb-stage /tmp/namesdb-data/far-manzanar.csv
+    
+    # Search for record
+    $ namesdb search -H localhost:9200 -i namesdb-stage yano
+    $ namesdb search -H localhost:9200 -i namesdb-stage "George Takei"
+    $ namesdb search -H localhost:9200 -i namesdb-stage 7-manzanar_zoriki_1922_masayuki
+
+Note: You can set environment variables for HOSTS and INDEX.:
+
+    $ export ES_HOSTS=localhost:9200
+    $ export ES_INDEX=namesdb-dev
+
+"""
+
+
+CREATE_DSCR = "Create the specified Elasticsearch index and upload mappings."
+CREATE_HELP = """
+More details about create function.
+"""
+
+
+DSTROY_DSCR = "Destroy the specified Elasticsearch index and all its records."
+DSTROY_HELP = """
+Think twice before you do this, then think again.
+"""
+
+
+STATUS_DSCR = "Check status of specified Elasticsearch index."
+STATUS_HELP = """
+Useful for checking whether or not specified index exits before destroying it.
+"""
+
+
+IMPORT_DSCR = "Import records from CSV file, upload to Elasticsearch."
+IMPORT_HELP = """
+In normal usage the filename should consist of dataset plus .csv:
+
+    $ namesdb import -H localhost:9200 -i namesdb-stage /tmp/namesdb-data/far-manzanar.csv
+
+If filename does not contain the dataset name, specify using -d/--dataset:
+
+    $ namesdb import -H localhost:9200 -i namesdb-stage -d far-manzanar /tmp/random-file.csv
+"""
+
+
+DELETE_DSCR = "Delete records in CSV file from Elasticsearch."
+DELETE_HELP = """
+Use this function to delete all records for a given dataset by pointing the function at the CSV file.  To delete only certain records, make a CSV file containing a single column containing NamesDB pseudo IDs, having the column header "m_pseudoid".
+"""
+
+
+SEARCH_DSCR = "Perform search query, return results in raw JSON."
+SEARCH_HELP = """
+Whatever text follows the HOST and INDEX args will be pasted directly into the body of an Elasticsearch "match" query.
+
+Examples:
+
+    $ namesdb search -H localhost:9200 -i namesdb-stage yano
+    $ namesdb search -H localhost:9200 -i namesdb-stage "George Takei"
+    $ namesdb search -H localhost:9200 -i namesdb-stage 7-manzanar_zoriki_1922_masayuki
+
+"""
+
+    
+import argparse
+import ConfigParser
+from datetime import datetime
+import json
+import logging
+import os
+import sys
+
+from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Index
+from elasticsearch_dsl import Search
+from elasticsearch_dsl.query import MultiMatch
+from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl.exceptions import ValidationException
+
+from namesdb import sourcefile
+from namesdb import definitions
+from namesdb import models
+
+def set_logging(level, stream=sys.stdout):
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        stream=stream,
+    )
+
+LOGGING_LEVEL = 'INFO'
+
+set_logging(LOGGING_LEVEL, stream=sys.stdout)
+
+
+CONFIG_FILES = ['/etc/ddr/names.cfg', '/etc/ddr/names-local.cfg']
+config = ConfigParser.ConfigParser()
+configs_read = config.read(CONFIG_FILES)
+#if not configs_read:
+#    raise NoConfigError('No config file!')
+
+
+def make_hosts( text ):
+    hosts = []
+    for host in text.split(','):
+        h,p = host.split(':')
+        hosts.append( {'host':h, 'port':p} )
+    return hosts
+
+def set_hosts_index(hosts, index):
+    logging.debug('Connecting %s' % hosts)
+    connections.create_connection(hosts=hosts)
+    logging.debug('Index %s' % index)
+    return Index(index)
+
+def get_connection(hosts):
+    return Elasticsearch(hosts)
+
+def format_json(data):
+    return json.dumps(data, indent=4, separators=(',', ': '), sort_keys=True)
+
+
+# create index ---------------------------------------------------------
+
+def create_index(hosts, index, args):
+    index.create()
+    logging.debug('Creating mappings')
+    models.Record.init()
+    logging.debug('Registering doc types')
+    index.doc_type(models.Record)
+    logging.debug('DONE')
+
+
+# destroy index --------------------------------------------------------
+    
+def dstroy_index(hosts, index, args):
+    logging.debug('Deleting index %s' % index)
+    index.delete()
+    logging.debug('DONE')
+
+
+# status check ---------------------------------------------------------
+    
+def status(hosts, index, args):
+    set_logging('INFO', stream=sys.stdout)
+    es = get_connection(hosts)
+    status = es.indices.status()
+    
+    # list indices
+    logging.info('Indices on this cluster:')
+    indices = status['indices'].keys()
+    indices.sort()
+    logging.info(format_json(indices))
+    
+    # selected info on selected index
+    if index._name not in indices:
+        logging.error('Selected index not present in cluster: %s' % index._name)
+        sys.exit(1)
+    logging.info('Selected index:')
+    this_index = {
+        key: status['indices'][index._name][key]
+        for key in ['docs', 'index']
+    }
+    this_index['name'] = index._name
+    logging.info(format_json(this_index))
+    
+    set_logging(LOGGING_LEVEL, stream=sys.stdout)
+
+
+# import records -------------------------------------------------------
+
+def verify_headers(fieldnames, row):
+    """Verify that all fields in headers, no extras
+    """
+    missing = [f for f in fieldnames if f not in row]
+    extra = [f for f in row if f not in fieldnames]
+    return missing,extra
+
+def map_headers(row):
+    """Map header field names to column numbers
+    """
+    headers_cols = {}
+    for n,header in enumerate(row):
+        headers_cols[header] = n
+    return headers_cols
+    
+def make_rowd(headers, row, dataset=None):
+    """Take list of column values and return a dict
+    """
+    rowd = {}
+    for fieldname,index in headers.iteritems():
+        rowd[fieldname] = row[index]
+    if dataset:
+        rowd['dataset'] = dataset
+    return rowd
+
+def make_record(fieldnames, rowd):
+    record = models.Record()
+    record.errors = []
+    for field in fieldnames:
+        try:
+            setattr(record, field, rowd[field])
+        except ValidationException:
+            err = ':'.join([field, rowd[field]])
+            record.errors.append(err)
+    return record
+
+def load_records(fields, headers, rows, dataset):
+    records = []
+    num_rows = len(rows)
+    n = 0
+    while rows:
+        n += 1
+        row = rows.pop(0)
+        if dataset in ['wra-master', 'far-ancestry']:
+            rowd = make_rowd(headers, row, dataset)
+        else:
+            rowd = make_rowd(headers, row)
+        record = make_record(fields, rowd)
+        logging.info('Loading %s/%s %s' % (n, num_rows, record))
+        records.append(record)
+    return records
+
+def find_errors(records):
+    return [r for r in records if r.errors]
+
+def write_records(records):
+    for record in records:
+        logging.info('Saving %s' % record)
+        record.save()
+
+def import_records(hosts, index, args):
+    
+    # check args
+    if not os.path.exists(args.csvpath):
+        logging.error('ddr-import: CSV file does not exist.')
+        sys.exit(1)
+    
+    if args.dataset:
+        dataset = args.dataset
+    else:
+        path,filename = os.path.split(args.csvpath)
+        dataset,ext = os.path.splitext(filename)
+    logging.info('Dataset: %s' % dataset)
+    if not dataset in definitions.DATASETS.keys():
+        logging.error('ddr-import: unknown dataset: %s.' % dataset)
+        sys.exit(1)
+    
+    start = datetime.now()
+    
+    fields = definitions.DATASETS[dataset]
+    logging.info('Fields: %s' % fields)
+    
+    logging.info('Reading file: %s' % args.csvpath)
+    rows = sourcefile.read_csv(args.csvpath)
+    header_row = rows.pop(0)
+    logging.info('ok (%s rows)' % str(len(rows)))
+    
+    logging.info('Verifying headers')
+    missing_headers,extra_headers = verify_headers(fields, header_row)
+    if missing_headers:
+        logging.error('ddr-import: Missing header(s): %s' % missing_headers)
+        logging.error('headers: %s' % header_row)
+        sys.exit(1)
+    if extra_headers:
+        logging.error('ddr-import: Extra header(s): %s' % extra_headers)
+        logging.error('headers: %s' % header_row)
+        sys.exit(1)
+    logging.info('ok')
+    headers = map_headers(header_row)
+    
+    logging.info('Loading records')
+    records = load_records(fields, headers, rows, dataset)
+    logging.info('Loaded %s records' % len(records))
+    
+    logging.info('Checking for errors')
+    record_errors = find_errors(records)
+    if record_errors:
+        logging.error('%s records contain errors:' % str(len(record_errors)))
+        for record in record_errors:
+            logging.error('| %s: %s' % (record, ', '.join(record.errors)))
+        logging.error('Stopping.')
+        sys.exit(1)
+    else:
+        logging.info('No errors detected')    
+    
+    logging.info('Writing to Elasticsearch')
+    write_records(records)
+    
+    finish = datetime.now()
+    elapsed = finish - start
+    logging.info('DONE - %s elapsed' % elapsed)
+
+
+# delete records -------------------------------------------------------
+
+def delete_records(hosts, index, args):
+    logging.error('NOT IMPLEMENTED YET')
+
+
+# search ---------------------------------------------------------------
+
+def hitvalue(hit, field):
+    """
+    For some reason, Search hit objects wrap values in lists.
+    returns the value inside the list.
+    """
+    if hit[field] and isinstance(hit[field], list):
+        value = hit[field][0]
+    else:
+        value = hit[field]
+    return value
+
+def search(hosts, index, args):
+    logging.info('query: "%s"' % args.query)
+    s = Search().doc_type(models.Record)
+    s = s.fields(definitions.FIELDS_MASTER)
+    s = s.sort('m_pseudoid')
+    s = s.query(
+        'multi_match', query=args.query, fields=definitions.FIELDS_MASTER
+    )[0:10000]
+    response = s.execute()
+    # response contains "records" but all the value is wrapped in a list
+    records = []
+    for hit in response:
+        r = models.Record(
+            m_pseudoid = hitvalue(hit, 'm_pseudoid'),
+            m_dataset = hitvalue(hit, 'm_dataset'),
+            m_camp = hitvalue(hit, 'm_camp'),
+            m_lastname = hitvalue(hit, 'm_lastname'),
+            m_firstname = hitvalue(hit, 'm_firstname'),
+            m_birthyear = hitvalue(hit, 'm_birthyear'),
+            m_gender = hitvalue(hit, 'm_gender'),
+            m_familyno = hitvalue(hit, 'm_familyno'),
+            m_individualno = hitvalue(hit, 'm_individualno'),
+            m_originalstate = hitvalue(hit, 'm_originalstate'),
+        )
+        records.append(r)
+    # display
+    logging.info('%s records' % len(records))
+    for record in records:
+        logging.info(record)
+    # if only single result, display it
+    if len(records) == 1:
+        for field in definitions.FIELDS_MASTER:
+            logging.info('%s: %s' % (field, getattr(record, field)))
+
+
+def main():
+    
+    # look for HOSTS and INDEX in environment
+    if 'ES_HOSTS' in os.environ:
+        hostsarg = { 'default': os.environ['ES_HOSTS'] }
+    else:
+        hostsarg = { 'required': True }
+    if 'ES_INDEX' in os.environ:
+        indexarg = { 'default': os.environ['ES_INDEX'] }
+    else:
+        indexarg = { 'required': True }
+    
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(
+        description=DESCRIPTION, epilog=EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    
+    subparsers = parser.add_subparsers(
+        dest='cmd',
+        title=SUBPARSER_TITLE,
+        description=SUBPARSER_DESCRIPTION,
+        help=SUBPARSER_HELP
+    )
+    
+    create_parser = subparsers.add_parser('create', description=CREATE_DSCR, epilog=CREATE_HELP, formatter_class=formatter,)
+    dstroy_parser = subparsers.add_parser('destroy',description=DSTROY_DSCR, epilog=DSTROY_HELP, formatter_class=formatter,)
+    status_parser = subparsers.add_parser('status', description=STATUS_DSCR, epilog=STATUS_HELP, formatter_class=formatter,)
+    import_parser = subparsers.add_parser('import', description=IMPORT_DSCR, epilog=IMPORT_HELP, formatter_class=formatter,)
+    delete_parser = subparsers.add_parser('delete', description=DELETE_DSCR, epilog=DELETE_HELP, formatter_class=formatter,)
+    search_parser = subparsers.add_parser('search', description=SEARCH_DSCR, epilog=SEARCH_HELP, formatter_class=formatter,)
+    
+    create_parser.set_defaults(func=create_index)
+    dstroy_parser.set_defaults(func=dstroy_index)
+    status_parser.set_defaults(func=status)
+    import_parser.set_defaults(func=import_records)
+    delete_parser.set_defaults(func=delete_records)
+    search_parser.set_defaults(func=search)
+    
+    create_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
+    create_parser.add_argument('-i', '--index', help='Elasticsearch index.', **hostsarg)
+    
+    dstroy_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
+    dstroy_parser.add_argument('-i', '--index', help='Elasticsearch index.', **hostsarg)
+    
+    status_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
+    status_parser.add_argument('-i', '--index', help='Elasticsearch index.', **hostsarg)
+    
+    import_parser.add_argument('csvpath', help='Absolute path to CSV file (named ${dataset}.csv).')
+    import_parser.add_argument('-d', '--dataset', required=False, help='Dataset name (if not in filename).')
+    import_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
+    import_parser.add_argument('-i', '--index', help='Elasticsearch index.', **hostsarg)
+    
+    delete_parser.add_argument('csvpath', help='Absolute path to CSV file (named ${dataset}.csv).')
+    delete_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
+    delete_parser.add_argument('-i', '--index', help='Elasticsearch index.', **hostsarg)
+    
+    search_parser.add_argument('query', help='Search query.')
+    search_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
+    search_parser.add_argument('-i', '--index', help='Elasticsearch index.', **hostsarg)
+    
+    args = parser.parse_args()
+    
+    hosts = make_hosts(args.host)
+    index = set_hosts_index(hosts, args.index)
+    
+    # call selected function
+    exit = 0
+    if   args.cmd == 'create':  create_index(hosts, index, args)
+    elif args.cmd == 'destroy': dstroy_index(hosts, index, args)
+    elif args.cmd == 'status':  status(hosts, index, args)
+    elif args.cmd == 'import':  import_records(hosts, index, args)
+    elif args.cmd == 'delete':  delete_records(hosts, index, args)
+    elif args.cmd == 'search':  search(hosts, index, args)
+
+
+if __name__ == '__main__':
+    main()

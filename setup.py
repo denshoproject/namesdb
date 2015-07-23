@@ -38,7 +38,7 @@ setup(
     },
     include_package_data=True,
     scripts = [
-        'bin/names-import',
+        'bin/namesdb',
     ],
     install_requires=requirements,
     license="TBD",
