@@ -26,6 +26,10 @@ Install encyc-front software, dependencies, and configs::
 
     # make install
 
+Activate virtualenv before using namesdb, generating docs, testing, etc.::
+
+    $ source /usr/local/src/env/namesdb/bin/activate
+
 Install Elasticsearch if desired::
 
     # make install-elasticsearch
