@@ -1,9 +1,13 @@
 SHELL = /bin/bash
 DEBIAN_CODENAME := $(shell lsb_release -sc)
 
+PACKAGE_SERVER=tank.densho.org
+
 PIP_CACHE_DIR=/usr/local/src/pip-cache
 VIRTUALENV=/usr/local/src/env/namesdb
 INSTALLDIR=/usr/local/src/namesdb
+
+ELASTICSEARCH=elasticsearch-1.0.1.deb
 
 
 .PHONY: clean-pyc clean-build docs clean
@@ -84,3 +88,16 @@ install: clean
 	pip install -U --download-cache=$(PIP_CACHE_DIR) -r $(INSTALLDIR)/requirements.txt
 	source $(VIRTUALENV)/bin/activate; \
 	python setup.py install
+
+install-elasticsearch:
+	@echo ""
+	@echo "Elasticsearch ----------------------------------------------------------"
+# Elasticsearch is configured/restarted here so it's online by the time script is done.
+	apt-get --assume-yes install gdebi openjdk-7-jre
+	wget -nc -P /tmp/downloads http://$(PACKAGE_SERVER)/$(ELASTICSEARCH)
+	gdebi --non-interactive /tmp/downloads/$(ELASTICSEARCH)
+	cp $(INSTALLDIR)/debian/conf/elasticsearch.yml /etc/elasticsearch/
+	chown root.root /etc/elasticsearch/elasticsearch.yml
+	chmod 644 /etc/elasticsearch/elasticsearch.yml
+	@echo "${bldgrn}search engine (re)start${txtrst}"
+	/etc/init.d/elasticsearch restart
