@@ -103,7 +103,6 @@ from elasticsearch_dsl import Index
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.query import MultiMatch
 from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.exceptions import ValidationException
 
 from namesdb import sourcefile
 from namesdb import definitions
@@ -222,17 +221,6 @@ def make_rowd(headers, row, dataset=None):
         rowd['dataset'] = dataset
     return rowd
 
-def make_record(fieldnames, rowd):
-    record = models.Record()
-    record.errors = []
-    for field in fieldnames:
-        try:
-            setattr(record, field, rowd[field])
-        except ValidationException:
-            err = ':'.join([field, rowd[field]])
-            record.errors.append(err)
-    return record
-
 def load_records(fields, headers, rows, dataset):
     records = []
     num_rows = len(rows)
@@ -244,7 +232,7 @@ def load_records(fields, headers, rows, dataset):
             rowd = make_rowd(headers, row, dataset)
         else:
             rowd = make_rowd(headers, row)
-        record = make_record(fields, rowd)
+        record = models.Record.from_dict(fields, dataset, rowd['m_pseudoid'], rowd)
         logging.info('Loading %s/%s %s' % (n, num_rows, record))
         records.append(record)
     return records

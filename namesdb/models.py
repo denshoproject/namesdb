@@ -12,8 +12,10 @@ from elasticsearch_dsl import Index
 from elasticsearch_dsl import DocType, String, Date, Nested, Boolean, analysis
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl.exceptions import ValidationException
 
 DOCSTORE_INDEX = 'namesdb-dev'
+DOC_TYPE = 'names-record'
 
 
 class Record(DocType):
@@ -76,7 +78,29 @@ class Record(DocType):
     
     class Meta:
         index = DOCSTORE_INDEX
-        doc_type = 'names-record'
+        doc_type = DOC_TYPE
     
     def __repr__(self):
-        return "<Record '%s'>" % self.m_pseudoid
+        return "<Record '%s:%s'>" % (self.m_dataset, self.m_pseudoid)
+    
+    @staticmethod
+    def from_dict(fieldnames, m_dataset, m_pseudoid, data):
+        """
+        @param fieldnames: list
+        @param m_dataset: str
+        @param m_pseudoid: str
+        @param data: dict
+        @returns: Record
+        """
+        record = Record(meta={
+            'id': ':'.join([m_dataset, m_pseudoid])
+        })
+        record.errors = []
+        for field in fieldnames:
+            try:
+                setattr(record, field, data[field])
+            except ValidationException:
+                err = ':'.join([field, data[field]])
+                record.errors.append(err)
+        record.m_dataset = m_dataset
+        return record
