@@ -316,19 +316,9 @@ def delete_records(hosts, index, args):
 
 # search ---------------------------------------------------------------
 
-def hitvalue(hit, field):
-    """
-    For some reason, Search hit objects wrap values in lists.
-    returns the value inside the list.
-    """
-    if hit[field] and isinstance(hit[field], list):
-        value = hit[field][0]
-    else:
-        value = hit[field]
-    return value
-
 def search(hosts, index, args):
     logging.info('query: "%s"' % args.query)
+    
     s = Search().doc_type(models.Record)
     s = s.fields(definitions.FIELDS_MASTER)
     s = s.sort('m_pseudoid')
@@ -336,23 +326,8 @@ def search(hosts, index, args):
         'multi_match', query=args.query, fields=definitions.FIELDS_MASTER
     )[0:10000]
     response = s.execute()
-    # response contains "records" but all the value is wrapped in a list
-    records = []
-    for hit in response:
-        r = models.Record(
-            m_pseudoid = hitvalue(hit, 'm_pseudoid'),
-            m_dataset = hitvalue(hit, 'm_dataset'),
-            m_camp = hitvalue(hit, 'm_camp'),
-            m_lastname = hitvalue(hit, 'm_lastname'),
-            m_firstname = hitvalue(hit, 'm_firstname'),
-            m_birthyear = hitvalue(hit, 'm_birthyear'),
-            m_gender = hitvalue(hit, 'm_gender'),
-            m_familyno = hitvalue(hit, 'm_familyno'),
-            m_individualno = hitvalue(hit, 'm_individualno'),
-            m_originalstate = hitvalue(hit, 'm_originalstate'),
-        )
-        records.append(r)
-    # display
+    records = [models.Record.from_hit(hit) for hit in response]
+
     logging.info('%s records' % len(records))
     for record in records:
         logging.info(record)

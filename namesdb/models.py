@@ -17,6 +17,22 @@ from elasticsearch_dsl.exceptions import ValidationException
 DOCSTORE_INDEX = 'namesdb-dev'
 DOC_TYPE = 'names-record'
 
+def _hitvalue(hit, field):
+    """Extract list-wrapped values from their lists.
+    
+    For some reason, Search hit objects wrap values in lists.
+    returns the value inside the list.
+    
+    @param hit: Elasticsearch search hit object
+    @param field: str field name
+    @return: value
+    """
+    if hit[field] and isinstance(hit[field], list):
+        value = hit[field][0]
+    else:
+        value = hit[field]
+    return value
+
 
 class Record(DocType):
     """FAR/WRA record model
@@ -103,4 +119,22 @@ class Record(DocType):
                 err = ':'.join([field, data[field]])
                 record.errors.append(err)
         record.m_dataset = m_dataset
+        return record
+    
+    @staticmethod
+    def from_hit(hit):
+        """Build Record object from Elasticsearch hit
+        """
+        record = Record(
+            m_pseudoid = _hitvalue(hit, 'm_pseudoid'),
+            m_dataset = _hitvalue(hit, 'm_dataset'),
+            m_camp = _hitvalue(hit, 'm_camp'),
+            m_lastname = _hitvalue(hit, 'm_lastname'),
+            m_firstname = _hitvalue(hit, 'm_firstname'),
+            m_birthyear = _hitvalue(hit, 'm_birthyear'),
+            m_gender = _hitvalue(hit, 'm_gender'),
+            m_familyno = _hitvalue(hit, 'm_familyno'),
+            m_individualno = _hitvalue(hit, 'm_individualno'),
+            m_originalstate = _hitvalue(hit, 'm_originalstate'),
+        )
         return record
