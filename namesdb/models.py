@@ -14,6 +14,8 @@ from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl.exceptions import ValidationException
 
+import definitions
+
 DOCSTORE_INDEX = 'namesdb-dev'
 DOC_TYPE = 'names-record'
 
@@ -124,17 +126,15 @@ class Record(DocType):
     @staticmethod
     def from_hit(hit):
         """Build Record object from Elasticsearch hit
+        @param hit
+        @returns: Record
         """
+        m_pseudoid = _hitvalue(hit, 'm_pseudoid')
+        m_dataset = _hitvalue(hit, 'm_dataset')
         record = Record(
-            m_pseudoid = _hitvalue(hit, 'm_pseudoid'),
-            m_dataset = _hitvalue(hit, 'm_dataset'),
-            m_camp = _hitvalue(hit, 'm_camp'),
-            m_lastname = _hitvalue(hit, 'm_lastname'),
-            m_firstname = _hitvalue(hit, 'm_firstname'),
-            m_birthyear = _hitvalue(hit, 'm_birthyear'),
-            m_gender = _hitvalue(hit, 'm_gender'),
-            m_familyno = _hitvalue(hit, 'm_familyno'),
-            m_individualno = _hitvalue(hit, 'm_individualno'),
-            m_originalstate = _hitvalue(hit, 'm_originalstate'),
+            meta={'id': ':'.join([m_dataset, m_pseudoid])}
         )
+        for field in definitions.FIELDS_MASTER:
+            setattr(record, field, _hitvalue(hit, field))
+        record.m_dataset = m_dataset
         return record
