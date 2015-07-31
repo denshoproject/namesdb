@@ -51,7 +51,7 @@ FIELD_DEFINITIONS = {
         'sample': 'far-ancestry',
         'notes': 'far-ancestry|far-poston|far-minidoka|far-manzanar|wra',
     },
-    'm_pseudo_id': {
+    'm_pseudoid': {
 	'label': 'Pseudo ID',
         'description': 'Consolidated derived ID',
         'type': 'string',
