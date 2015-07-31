@@ -138,3 +138,15 @@ class Record(DocType):
             setattr(record, field, _hitvalue(hit, field))
         record.m_dataset = m_dataset
         return record
+     
+    @staticmethod
+    def field_values(field):
+        """Returns unique values and counts for specified field.
+        """
+        s = Search().doc_type(Record)
+        s.aggs.bucket('bucket', 'terms', field=field, size=1000)
+        response = s.execute()
+        return [
+            (x['key'], x['doc_count'])
+            for x in response.aggregations['bucket']['buckets']
+        ]
