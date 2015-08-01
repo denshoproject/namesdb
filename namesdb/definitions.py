@@ -1,6 +1,7 @@
 FIELDS_MASTER = [
-    'm_dataset', 'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_birthyear', 'm_gender',
-    'm_originalstate', 'm_familyno', 'm_individualno',
+    'm_dataset', 'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_birthyear',
+    'm_gender', 'm_originalstate', 'm_familyno', 'm_individualno',
+    'm_altfamilyid', 'm_altindividualid', 'm_ddrreference', 'm_notes',
 ]
 
 # order of fields in far-ancestry.csv
@@ -16,6 +17,7 @@ FIELDS_ANCESTRY = [
 FIELDS_CAMPS = [
     'm_dataset', 'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_birthyear',
     'm_gender', 'm_originalstate', 'm_familyno', 'm_individualno',
+    'm_altfamilyid', 'm_altindividualid', 'm_ddrreference', 'm_notes',
     'f_othernames', 'f_maritalstatus', 'f_citizenship', 'f_alienregistration',
     'f_entrytype', 'f_entrydate', 'f_originalcity', 'f_departuretype',
     'f_departuredate', 'f_destinationcity', 'f_destinationstate', 'f_campaddress',
@@ -23,10 +25,11 @@ FIELDS_CAMPS = [
 ]
 
 FIELDS_WRA = [
-    'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_birthyear',
+    'm_dataset', 'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_birthyear',
     'm_gender', 'm_originalstate', 'm_familyno', 'm_individualno',
-    'w_assemblycenter', 'w_originaladdress', 'w_birthcountry', 'w_fatheroccup',
-    'w_fatheroccupcat', 'w_yearsschooljapan', 'w_gradejapan', 'w_schooldegree',
+    'm_altfamilyid', 'm_altindividualid', 'm_ddrreference', 'm_notes',
+    'w_assemblycenter', 'w_originaladdress', 'w_birthcountry', 'w_fatheroccupus',
+    'w_fatheroccupabr', 'w_yearsschooljapan', 'w_gradejapan', 'w_schooldegree',
     'w_yearofusarrival', 'w_timeinjapan', 'w_notimesinjapan', 'w_ageinjapan',
     'w_militaryservice', 'w_maritalstatus', 'w_ethnicity', 'w_birthplace',
     'w_citizenshipstatus', 'w_highestgrade', 'w_language', 'w_religion',
@@ -122,6 +125,38 @@ FIELD_DEFINITIONS = {
         'required': False,
         'sample': '34339B',
         'notes': 'Not included in far-ancestry data',
+    },
+    'm_altfamilyid': {
+	'label': '',
+        'description': '',
+        'type': 'string',
+        'required': False,
+        'sample': '',
+        'notes': '',
+    },
+    'm_altindividualid': {
+	'label': '',
+        'description': '',
+        'type': 'string',
+        'required': False,
+        'sample': '',
+        'notes': '',
+    },
+    'm_ddrreference': {
+	'label': '',
+        'description': '',
+        'type': 'string',
+        'required': False,
+        'sample': '',
+        'notes': '',
+    },
+    'm_notes': {
+	'label': '',
+        'description': '',
+        'type': 'string',
+        'required': False,
+        'sample': '',
+        'notes': '',
     },
     
     'f_originalcity': {
