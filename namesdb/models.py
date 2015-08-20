@@ -29,11 +29,12 @@ def _hitvalue(hit, field):
     @param field: str field name
     @return: value
     """
-    if hit[field] and isinstance(hit[field], list):
+    if hit.get(field) \
+       and isinstance(hit[field], list):
         value = hit[field][0]
-    else:
+    elif hit.get(field):
         value = hit[field]
-    return value
+    return None
 
 
 class Record(DocType):
@@ -129,15 +130,18 @@ class Record(DocType):
         @param hit
         @returns: Record
         """
-        m_pseudoid = _hitvalue(hit, 'm_pseudoid')
-        m_dataset = _hitvalue(hit, 'm_dataset')
-        record = Record(
-            meta={'id': ':'.join([m_dataset, m_pseudoid])}
-        )
-        for field in definitions.FIELDS_MASTER:
-            setattr(record, field, _hitvalue(hit, field))
-        record.m_dataset = m_dataset
-        return record
+        hit_d = hit.__dict__['_d_']
+        m_pseudoid = _hitvalue(hit_d, 'm_pseudoid')
+        m_dataset = _hitvalue(hit_d, 'm_dataset')
+        if m_dataset and m_pseudoid:
+            record = Record(
+                meta={'id': ':'.join([m_dataset, m_pseudoid])}
+            )
+            for field in definitions.FIELDS_MASTER:
+                setattr(record, field, _hitvalue(hit_d, field))
+            record.m_dataset = m_dataset
+            return record
+        return None
      
     @staticmethod
     def field_values(field):
