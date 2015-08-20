@@ -29,9 +29,9 @@ def _hitvalue(hit, field):
     @param field: str field name
     @return: value
     """
-    if hit.get(field) and isinstance(hit[field], list):
+    if hit[field] and isinstance(hit[field], list):
         value = hit[field][0]
-    elif hit.get(field):
+    else:
         value = hit[field]
     return value
 
