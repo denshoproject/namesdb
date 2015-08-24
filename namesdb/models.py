@@ -100,7 +100,11 @@ class Record(DocType):
         doc_type = DOC_TYPE
     
     def __repr__(self):
-        return "<Record '%s:%s'>" % (self.m_dataset, self.m_pseudoid)
+        return "<Record %s>" % Record.make_id(self.m_dataset, self.m_pseudoid)
+
+    @staticmethod
+    def make_id(m_dataset, m_pseudoid):
+        return ':'.join([m_dataset, m_pseudoid])
     
     @staticmethod
     def from_dict(fieldnames, m_dataset, m_pseudoid, data):
@@ -112,7 +116,7 @@ class Record(DocType):
         @returns: Record
         """
         record = Record(meta={
-            'id': ':'.join([m_dataset, m_pseudoid])
+            'id': Record.make_id(m_dataset, m_pseudoid)
         })
         record.errors = []
         for field in fieldnames:
@@ -135,7 +139,7 @@ class Record(DocType):
         m_dataset = _hitvalue(hit_d, 'm_dataset')
         if m_dataset and m_pseudoid:
             record = Record(
-                meta={'id': ':'.join([m_dataset, m_pseudoid])}
+                meta={'id': Record.make_id(m_dataset, m_pseudoid)}
             )
             for field in definitions.FIELDS_MASTER:
                 setattr(record, field, _hitvalue(hit_d, field))
