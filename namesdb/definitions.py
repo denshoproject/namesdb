@@ -53,6 +53,13 @@ FIELD_DEFINITIONS = {
         'required': True,
         'sample': 'far-ancestry',
         'notes': 'far-ancestry|far-poston|far-minidoka|far-manzanar|wra',
+        'choices': [
+            ('far-ancestry', 'FAR Ancestry'),
+            ('far-manzanar', 'FAR Manzanar'),
+            ('far-minidoka', 'FAR Minidoka'),
+            ('far-poston', 'FAR Poston'),
+            ('wra-master', 'WRA Master'),
+        ],
     },
     'm_pseudoid': {
 	'label': 'Pseudo ID',
@@ -68,6 +75,18 @@ FIELD_DEFINITIONS = {
         'type': 'string',
         'required': True,
         'sample': '2-poston',
+        'choices': [
+            ('1-topaz', 'Topaz'),
+            ('2-poston', 'Poston'),
+            ('3-gilariver', 'Gila River'),
+            ('4-amache', 'Amache'),
+            ('5-heartmountain', 'Heart Mountain'),
+            ('6-jerome', 'Jerome'),
+            ('7-manzanar', 'Manzanar'),
+            ('8-minidoka', 'Minidoka'),
+            ('9-rohwer', 'Rohwer'),
+            ('10-tulelake', 'Tule Lake'),
+        ],
         'notes': '',
     },
     'm_lastname': {
@@ -100,6 +119,10 @@ FIELD_DEFINITIONS = {
         'type': 'string',
         'required': True,
         'sample': 'M',
+        'choices': [
+            ('F', 'female'),
+            ('M', 'male'),
+        ],
         'notes': '',
     },
     'm_originalstate': {
@@ -108,6 +131,7 @@ FIELD_DEFINITIONS = {
         'type': 'string',
         'required': False,
         'sample': 'Utah',
+        'choices': [],
         'notes': 'Not included in far-ancestry data',
     },
     'm_familyno': {
