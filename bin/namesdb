@@ -152,7 +152,7 @@ def format_json(data):
 def create_index(hosts, index, args):
     index.create()
     logging.debug('Creating mappings')
-    models.Record.init()
+    models.Record.init(index=index._name)
     logging.debug('Registering doc types')
     index.doc_type(models.Record)
     logging.debug('DONE')
