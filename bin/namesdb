@@ -221,7 +221,7 @@ def make_rowd(headers, row, dataset=None):
         rowd['dataset'] = dataset
     return rowd
 
-def load_records(fields, headers, rows, dataset):
+def load_records(indexname, fields, headers, rows, dataset):
     records = []
     num_rows = len(rows)
     n = 0
@@ -232,7 +232,7 @@ def load_records(fields, headers, rows, dataset):
             rowd = make_rowd(headers, row, dataset)
         else:
             rowd = make_rowd(headers, row)
-        record = models.Record.from_dict(fields, dataset, rowd['m_pseudoid'], rowd)
+        record = models.Record.from_dict(indexname, fields, dataset, rowd['m_pseudoid'], rowd)
         logging.info('Loading %s/%s %s' % (n, num_rows, record))
         records.append(record)
     return records
@@ -286,7 +286,11 @@ def import_records(hosts, index, args):
     headers = map_headers(header_row)
     
     logging.info('Loading records')
-    records = load_records(fields, headers, rows, dataset)
+    if isinstance(index, basestring):
+        indexname = index
+    else:
+        indexname = index._name
+    records = load_records(indexname, fields, headers, rows, dataset)
     logging.info('Loaded %s records' % len(records))
     
     logging.info('Checking for errors')

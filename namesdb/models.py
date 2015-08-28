@@ -16,7 +16,6 @@ from elasticsearch_dsl.exceptions import ValidationException
 
 import definitions
 
-DOCSTORE_INDEX = 'namesdb-dev'
 DOC_TYPE = 'names-record'
 
 def _hitvalue(hit, field):
@@ -96,7 +95,6 @@ class Record(DocType):
     w_filenumber = String(index='not_analyzed')
     
     class Meta:
-        index = DOCSTORE_INDEX
         doc_type = DOC_TYPE
     
     def __repr__(self):
@@ -107,8 +105,9 @@ class Record(DocType):
         return ':'.join([m_dataset, m_pseudoid])
     
     @staticmethod
-    def from_dict(fieldnames, m_dataset, m_pseudoid, data):
+    def from_dict(indexname, fieldnames, m_dataset, m_pseudoid, data):
         """
+        @param indexname: str
         @param fieldnames: list
         @param m_dataset: str
         @param m_pseudoid: str
@@ -116,6 +115,7 @@ class Record(DocType):
         @returns: Record
         """
         record = Record(meta={
+            'index': indexname,
             'id': Record.make_id(m_dataset, m_pseudoid)
         })
         record.errors = []
@@ -138,9 +138,9 @@ class Record(DocType):
         m_pseudoid = _hitvalue(hit_d, 'm_pseudoid')
         m_dataset = _hitvalue(hit_d, 'm_dataset')
         if m_dataset and m_pseudoid:
-            record = Record(
-                meta={'id': Record.make_id(m_dataset, m_pseudoid)}
-            )
+            record = Record(meta={
+                'id': Record.make_id(m_dataset, m_pseudoid)
+            })
             for field in definitions.FIELDS_MASTER:
                 setattr(record, field, _hitvalue(hit_d, field))
             record.m_dataset = m_dataset
