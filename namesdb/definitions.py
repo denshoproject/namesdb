@@ -1,3 +1,6 @@
+from collections import OrderedDict
+
+
 FIELDS_MASTER = [
     'm_dataset', 'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_birthyear',
     'm_gender', 'm_originalstate', 'm_familyno', 'm_individualno',
@@ -53,13 +56,13 @@ FIELD_DEFINITIONS = {
         'required': True,
         'sample': 'far-ancestry',
         'notes': 'far-ancestry|far-poston|far-minidoka|far-manzanar|wra',
-        'choices': [
+        'choices': OrderedDict([
             ('far-ancestry', 'FAR Ancestry'),
             ('far-manzanar', 'FAR Manzanar'),
             ('far-minidoka', 'FAR Minidoka'),
             ('far-poston', 'FAR Poston'),
             ('wra-master', 'WRA Master'),
-        ],
+        ]),
     },
     'm_pseudoid': {
 	'label': 'Pseudo ID',
@@ -75,7 +78,7 @@ FIELD_DEFINITIONS = {
         'type': 'string',
         'required': True,
         'sample': '2-poston',
-        'choices': [
+        'choices': OrderedDict([
             ('1-topaz', 'Topaz'),
             ('2-poston', 'Poston'),
             ('3-gilariver', 'Gila River'),
@@ -86,7 +89,7 @@ FIELD_DEFINITIONS = {
             ('8-minidoka', 'Minidoka'),
             ('9-rohwer', 'Rohwer'),
             ('10-tulelake', 'Tule Lake'),
-        ],
+        ]),
         'notes': '',
     },
     'm_lastname': {
@@ -119,10 +122,10 @@ FIELD_DEFINITIONS = {
         'type': 'string',
         'required': True,
         'sample': 'M',
-        'choices': [
+        'choices': OrderedDict([
             ('F', 'female'),
             ('M', 'male'),
-        ],
+        ]),
         'notes': '',
     },
     'm_originalstate': {
@@ -131,7 +134,7 @@ FIELD_DEFINITIONS = {
         'type': 'string',
         'required': False,
         'sample': 'Utah',
-        'choices': [],
+        'choices': OrderedDict([]),
         'notes': 'Not included in far-ancestry data',
     },
     'm_familyno': {
