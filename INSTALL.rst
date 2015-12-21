@@ -33,3 +33,7 @@ Activate virtualenv before using namesdb, generating docs, testing, etc.::
 Install Elasticsearch if desired::
 
     # make install-elasticsearch
+
+Run the command with the `--help` flag for more usage info and examples::
+
+    $ namesdb --help

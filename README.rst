@@ -9,12 +9,11 @@ Names DB
         :target: https://pypi.python.org/pypi/namesdb
 
 
-Various FAR records.
+Loads FAR and WRA records from CSV files and uploads to Elasticsearch.
 
 * Copyright: 2015 Densho.org
 * Documentation: https://namesdb.readthedocs.org.
 
-Features
---------
+Please see INSTALL for installation instructions.
 
-* TODO
+The app expects CSV source files to contain certain fields.  These are definted in `namesdb/definitions.py`.
