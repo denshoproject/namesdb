@@ -4,8 +4,8 @@ DEBIAN_CODENAME := $(shell lsb_release -sc)
 PACKAGE_SERVER=tank.densho.org
 
 PIP_CACHE_DIR=/usr/local/src/pip-cache
-VIRTUALENV=/usr/local/src/env/namesdb
 INSTALLDIR=/usr/local/src/namesdb
+VIRTUALENV=$(INSTALLDIR)/venv/namesdb
 
 ELASTICSEARCH=elasticsearch-1.0.1.deb
 
@@ -121,7 +121,7 @@ install: clean
 # virtualenv
 	test -d $(VIRTUALENV) || virtualenv $(VIRTUALENV)
 	source $(VIRTUALENV)/bin/activate; \
-	pip install -U --download-cache=$(PIP_CACHE_DIR) bpython setuptools
+	pip install -U --download-cache=$(PIP_CACHE_DIR) bpython setuptools appdirs packaging pyparsing six
 	source $(VIRTUALENV)/bin/activate; \
 	pip install -U --download-cache=$(PIP_CACHE_DIR) -r $(INSTALLDIR)/requirements.txt
 	source $(VIRTUALENV)/bin/activate; \
