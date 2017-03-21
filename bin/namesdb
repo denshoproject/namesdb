@@ -241,8 +241,12 @@ def find_errors(records):
     return [r for r in records if r.errors]
 
 def write_records(records):
-    for record in records:
-        logging.info('Saving %s' % record)
+    num_rows = len(records)
+    n = 0
+    while records:
+        n += 1
+        record = records.pop(0)
+        logging.info('Saving %s/%s %s' % (n, num_rows, record))
         record.save()
 
 def import_records(hosts, index, args):
