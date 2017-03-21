@@ -299,17 +299,24 @@ def import_records(hosts, index, args):
     
     logging.info('Checking for errors')
     record_errors = find_errors(records)
-    if record_errors:
-        logging.error('%s records contain errors:' % str(len(record_errors)))
+    record_errors_msg = '%s records contain errors (%s%%):' % (
+        len(record_errors),
+        float(len(record_errors)) / len(records)
+    )
+    logging.error(record_errors_msg)
+    if record_errors and args.stop:
         for record in record_errors:
             logging.error('| %s: %s' % (record, ', '.join(record.errors)))
-        logging.error('Stopping.')
         sys.exit(1)
-    else:
-        logging.info('No errors detected')    
     
     logging.info('Writing to Elasticsearch')
     write_records(records)
+    
+    if record_errors:
+        logging.error(record_errors_msg)
+        for record in record_errors:
+            logging.error('| %s: %s' % (record, ', '.join(record.errors)))
+        logging.error(record_errors_msg)
     
     finish = datetime.now()
     elapsed = finish - start
@@ -397,6 +404,7 @@ def main():
     import_parser.add_argument('-d', '--dataset', required=False, help='Dataset name (if not in filename).')
     import_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
     import_parser.add_argument('-i', '--index', help='Elasticsearch index.', **hostsarg)
+    import_parser.add_argument('-s', '--stop', action='store_true', help='Stop if errors detected.')
     
     delete_parser.add_argument('csvpath', help='Absolute path to CSV file (named ${dataset}.csv).')
     delete_parser.add_argument('-H', '--host', help='Elasticsearch host and port (HOST:PORT).', **hostsarg)
