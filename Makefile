@@ -3,8 +3,8 @@ DEBIAN_CODENAME := $(shell lsb_release -sc)
 
 PACKAGE_SERVER=tank.densho.org
 
-PIP_CACHE_DIR=/usr/local/src/pip-cache
-INSTALLDIR=/usr/local/src/namesdb
+PIP_CACHE_DIR=/opt/pip-cache
+INSTALLDIR=/opt/namesdb
 VIRTUALENV=$(INSTALLDIR)/venv/namesdb
 
 ELASTICSEARCH=elasticsearch-1.0.1.deb
@@ -26,7 +26,7 @@ help:
 # 	@echo "dist - package"
 	@echo "install - install the package to the active Python's site-packages"
 	@echo "(v) indicates virtualenv required. Activate thusly:"
-	@echo "    $$ source /usr/local/src/env/namesdb/bin/activate"
+	@echo "    $$ source /opt/namesdb/venv/namesdb/bin/activate"
 	@echo "More info: make howto-install"
 
 howto-install:
@@ -45,8 +45,8 @@ howto-install:
 	@echo "Prepare for install::"
 	@echo ""
 	@echo "    # apt-get install make"
-	@echo "    # git clone git@github.com:densho/namesdb.git /usr/local/src/namesdb"
-	@echo "    # cd /usr/local/src/namesdb"
+	@echo "    # git clone git@github.com:densho/namesdb.git /opt/namesdb"
+	@echo "    # cd /opt/namesdb"
 	@echo ""
 	@echo "If not running the master branch, switch to it now::"
 	@echo ""
@@ -58,7 +58,7 @@ howto-install:
 	@echo ""
 	@echo "Activate virtualenv before using namesdb, generating docs, testing, etc.::"
 	@echo ""
-	@echo "    $$ source /usr/local/src/env/namesdb/bin/activate"
+	@echo "    $$ source /opt/namesdb/venv/namesdb/bin/activate"
 	@echo ""
 	@echo "Install Elasticsearch if desired::"
 	@echo ""
