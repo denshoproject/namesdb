@@ -148,10 +148,14 @@ class Record(DocType):
         return None
      
     @staticmethod
-    def field_values(field):
+    def field_values(field, es=None, index=None):
         """Returns unique values and counts for specified field.
         """
-        s = Search().doc_type(Record)
+        if es and index:
+            s = Search(using=es, index=index)
+        else:
+            s = Search()
+        s = s.doc_type(Record)
         s.aggs.bucket('bucket', 'terms', field=field, size=1000)
         response = s.execute()
         return [
