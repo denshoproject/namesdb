@@ -14,7 +14,7 @@ from elasticsearch_dsl import Search
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl.exceptions import ValidationException
 
-import definitions
+from . import definitions
 
 DOC_TYPE = 'names-record'
 
