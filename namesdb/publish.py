@@ -1,5 +1,5 @@
 from datetime import datetime
-import ConfigParser
+import configparser
 import json
 import logging
 import os
@@ -28,7 +28,7 @@ LOGGING_LEVEL = 'INFO'
 set_logging(LOGGING_LEVEL, stream=sys.stdout)
 
 CONFIG_FILES = ['/etc/ddr/names.cfg', '/etc/ddr/names-local.cfg']
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 configs_read = config.read(CONFIG_FILES)
 #if not configs_read:
 #    raise NoConfigError('No config file!')
@@ -123,7 +123,7 @@ def make_rowd(headers, row, dataset=None):
     """Take list of column values and return a dict
     """
     rowd = {}
-    for fieldname,index in headers.iteritems():
+    for fieldname,index in headers.items():
         rowd[fieldname] = row[index]
     if dataset:
         rowd['dataset'] = dataset
@@ -198,7 +198,7 @@ def import_records(hosts, index, args):
     headers = map_headers(header_row)
     
     logging.info('Loading records')
-    if isinstance(index, basestring):
+    if isinstance(index, str):
         indexname = index
     else:
         indexname = index._name
