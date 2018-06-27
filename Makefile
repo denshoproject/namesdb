@@ -119,11 +119,11 @@ docs:
 
 install: clean
 # virtualenv
-	test -d $(VIRTUALENV) || virtualenv $(VIRTUALENV)
+	test -d $(VIRTUALENV) || virtualenv --python=python3 --distribute --setuptools $(VIRTUALENV)
 	source $(VIRTUALENV)/bin/activate; \
-	pip install -U --download-cache=$(PIP_CACHE_DIR) bpython setuptools appdirs packaging pyparsing six
+	pip3 install -U --download-cache=$(PIP_CACHE_DIR) bpython setuptools appdirs packaging pyparsing six
 	source $(VIRTUALENV)/bin/activate; \
-	pip install -U --download-cache=$(PIP_CACHE_DIR) -r $(INSTALLDIR)/requirements.txt
+	pip3 install -U --download-cache=$(PIP_CACHE_DIR) -r $(INSTALLDIR)/requirements.txt
 	source $(VIRTUALENV)/bin/activate; \
 	python setup.py install
 

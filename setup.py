@@ -24,7 +24,7 @@ test_requirements = [
 
 setup(
     name='namesdb',
-    version='0.1.0',
+    version='1.0.0',
     description="Tools for importing FAR and WRA records.",
     long_description=readme + '\n\n' + history,
     author="Geoffrey Jost",
@@ -49,9 +49,6 @@ setup(
         'Intended Audience :: Developers',
         'License :: TBD',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
