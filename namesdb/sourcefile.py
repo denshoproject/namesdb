@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import codecs
+import csv
 from datetime import datetime
 import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 import sys
-
-import unicodecsv as csv
 
 
 CSV_DELIMITER = ','
