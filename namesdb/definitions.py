@@ -552,3 +552,12 @@ FIELD_DEFINITIONS['w_filenumber'] = {
     'sample': '',
     'notes': "Original: File Number",
 }
+FIELD_DEFINITIONS_NAMES = [key for key,item in FIELD_DEFINITIONS.items()]
+FIELD_DEFINITIONS_NAMES_STRINGS = [
+    key for key,item in FIELD_DEFINITIONS.items()
+    if item['type'] == 'string'
+]
+SEARCH_FIELDS = [
+    'm_dataset', 'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_gender',
+    'm_birthyear', 'm_originalstate', 'm_familyno', 'm_individualno',
+]
