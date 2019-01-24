@@ -7,7 +7,7 @@ PIP_CACHE_DIR=/opt/pip-cache
 INSTALLDIR=/opt/namesdb
 VIRTUALENV=$(INSTALLDIR)/venv/namesdb
 
-ELASTICSEARCH=elasticsearch-1.0.1.deb
+ELASTICSEARCH=elasticsearch-2.4.6.deb
 
 
 .PHONY: clean-pyc clean-build docs clean
