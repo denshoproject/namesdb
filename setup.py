@@ -37,9 +37,10 @@ setup(
         'namesdb': 'namesdb'
     },
     include_package_data=True,
-    scripts = [
-        'bin/namesdb',
-    ],
+    entry_points='''
+        [console_scripts]
+        namesdb=namesdb.cli:namesdb
+    ''',
     install_requires=requirements,
     license="TBD",
     zip_safe=False,

@@ -57,7 +57,7 @@ def format_json(data):
 
 # create index ---------------------------------------------------------
 
-def create_index(hosts, index, args):
+def create_index(hosts, index):
     index.create()
     logging.debug('Creating mappings')
     models.Record.init(index=index._name)
@@ -68,7 +68,7 @@ def create_index(hosts, index, args):
 
 # destroy index --------------------------------------------------------
     
-def dstroy_index(hosts, index, args):
+def dstroy_index(hosts, index):
     logging.debug('Deleting index %s' % index)
     index.delete()
     logging.debug('DONE')
@@ -76,7 +76,7 @@ def dstroy_index(hosts, index, args):
 
 # status check ---------------------------------------------------------
     
-def status(hosts, index, args):
+def status(hosts, index):
     set_logging('INFO', stream=sys.stdout)
     es = get_connection(hosts)
     status = es.indices.status()
@@ -157,17 +157,15 @@ def write_records(records):
         logging.info('Saving %s/%s %s' % (n, num_rows, record))
         record.save()
 
-def import_records(hosts, index, args):
+def import_records(hosts, index, dataset, stop, csvpath):
     
     # check args
-    if not os.path.exists(args.csvpath):
+    if not os.path.exists(csvpath):
         logging.error('ddr-import: CSV file does not exist.')
         sys.exit(1)
     
-    if args.dataset:
-        dataset = args.dataset
-    else:
-        path,filename = os.path.split(args.csvpath)
+    if not dataset:
+        path,filename = os.path.split(csvpath)
         dataset,ext = os.path.splitext(filename)
     logging.info('Dataset: %s' % dataset)
     if not dataset in definitions.DATASETS.keys():
@@ -179,8 +177,8 @@ def import_records(hosts, index, args):
     fields = definitions.DATASETS[dataset]
     logging.info('Fields: %s' % fields)
     
-    logging.info('Reading file: %s' % args.csvpath)
-    rows = sourcefile.read_csv(args.csvpath)
+    logging.info('Reading file: %s' % csvpath)
+    rows = sourcefile.read_csv(csvpath)
     header_row = rows.pop(0)
     logging.info('ok (%s rows)' % str(len(rows)))
     
@@ -233,20 +231,20 @@ def import_records(hosts, index, args):
 
 # delete records -------------------------------------------------------
 
-def delete_records(hosts, index, args):
+def delete_records(hosts, index):
     logging.error('NOT IMPLEMENTED YET')
 
 
 # search ---------------------------------------------------------------
 
-def search(hosts, index, args):
-    logging.info('query: "%s"' % args.query)
+def search(hosts, index, query):
+    logging.info('query: "%s"' % query)
     
     s = Search().doc_type(models.Record)
     s = s.fields(definitions.FIELDS_MASTER)
     s = s.sort('m_pseudoid')
     s = s.query(
-        'multi_match', query=args.query, fields=definitions.FIELDS_MASTER
+        'multi_match', query=query, fields=definitions.FIELDS_MASTER
     )[0:10000]
     response = s.execute()
     records = [models.Record.from_hit(hit) for hit in response]
