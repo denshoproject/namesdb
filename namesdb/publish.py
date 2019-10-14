@@ -13,8 +13,8 @@ from elasticsearch_dsl.connections import connections
 
 from . import sourcefile
 from . import definitions
+from . import docstore
 from . import models
-
 
 def set_logging(level, stream=sys.stdout):
     logging.basicConfig(
@@ -55,53 +55,6 @@ def format_json(data):
     return json.dumps(data, indent=4, separators=(',', ': '), sort_keys=True)
 
 
-# create index ---------------------------------------------------------
-
-def create_index(hosts, index):
-    index.create()
-    logging.debug('Creating mappings')
-    models.Record.init(index=index._name)
-    logging.debug('Registering doc types')
-    index.doc_type(models.Record)
-    logging.debug('DONE')
-
-
-# destroy index --------------------------------------------------------
-    
-def dstroy_index(hosts, index):
-    logging.debug('Deleting index %s' % index)
-    index.delete()
-    logging.debug('DONE')
-
-
-# status check ---------------------------------------------------------
-    
-def status(hosts, index):
-    set_logging('INFO', stream=sys.stdout)
-    es = get_connection(hosts)
-    status = es.indices.status()
-    
-    # list indices
-    logging.info('Indices on this cluster:')
-    indices = status['indices'].keys()
-    indices.sort()
-    logging.info(format_json(indices))
-    
-    # selected info on selected index
-    if index._name not in indices:
-        logging.error('Selected index not present in cluster: %s' % index._name)
-        sys.exit(1)
-    logging.info('Selected index:')
-    this_index = {
-        key: status['indices'][index._name][key]
-        for key in ['docs', 'index']
-    }
-    this_index['name'] = index._name
-    logging.info(format_json(this_index))
-    
-    set_logging(LOGGING_LEVEL, stream=sys.stdout)
-
-
 # import records -------------------------------------------------------
 
 def verify_headers(fieldnames, row):
@@ -129,7 +82,7 @@ def make_rowd(headers, row, dataset=None):
         rowd['dataset'] = dataset
     return rowd
 
-def load_records(indexname, fields, headers, rows, dataset):
+def load_records(dataset, fields, headers, rows):
     records = []
     num_rows = len(rows)
     n = 0
@@ -140,7 +93,7 @@ def load_records(indexname, fields, headers, rows, dataset):
             rowd = make_rowd(headers, row, dataset)
         else:
             rowd = make_rowd(headers, row)
-        record = models.Record.from_dict(indexname, fields, dataset, rowd['m_pseudoid'], rowd)
+        record = models.Record.from_dict(fields, dataset, rowd['m_pseudoid'], rowd)
         logging.info('Loading %s/%s %s' % (n, num_rows, record))
         records.append(record)
     return records
@@ -148,16 +101,19 @@ def load_records(indexname, fields, headers, rows, dataset):
 def find_errors(records):
     return [r for r in records if r.errors]
 
-def write_records(records):
+def write_records(ds, indexname, records):
     num_rows = len(records)
     n = 0
     while records:
         n += 1
         record = records.pop(0)
         logging.info('Saving %s/%s %s' % (n, num_rows, record))
-        record.save()
+        result = record.save(index=indexname, using=ds.es)
 
-def import_records(hosts, index, dataset, stop, csvpath):
+def import_records(ds, dataset, stop, csvpath):
+    doctype = 'record'
+    ES_Class = docstore.ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+    indexname = ds.index_name(doctype)
     
     # check args
     if not os.path.exists(csvpath):
@@ -196,11 +152,7 @@ def import_records(hosts, index, dataset, stop, csvpath):
     headers = map_headers(header_row)
     
     logging.info('Loading records')
-    if isinstance(index, str):
-        indexname = index
-    else:
-        indexname = index._name
-    records = load_records(indexname, fields, headers, rows, dataset)
+    records = load_records(dataset, fields, headers, rows)
     logging.info('Loaded %s records' % len(records))
     
     logging.info('Checking for errors')
@@ -216,7 +168,7 @@ def import_records(hosts, index, dataset, stop, csvpath):
         sys.exit(1)
     
     logging.info('Writing to Elasticsearch')
-    write_records(records)
+    write_records(ds, indexname, records)
     
     if record_errors:
         logging.error(record_errors_msg)
@@ -231,13 +183,13 @@ def import_records(hosts, index, dataset, stop, csvpath):
 
 # delete records -------------------------------------------------------
 
-def delete_records(hosts, index):
+def delete_records(hosts):
     logging.error('NOT IMPLEMENTED YET')
 
 
 # search ---------------------------------------------------------------
 
-def search(hosts, index, query):
+def search(hosts, query):
     logging.info('query: "%s"' % query)
     
     s = Search().doc_type(models.Record)

@@ -14,6 +14,7 @@ from . import definitions
 
 DOC_TYPE = 'names-record'
 
+
 def _hitvalue(hit, field):
     """Extract list-wrapped values from their lists.
     
@@ -32,7 +33,7 @@ def _hitvalue(hit, field):
     return None
 
 
-class Record(dsl.DocType):
+class Record(dsl.Document):
     """FAR/WRA record model
     
     m_pseudoid = m_camp + lastname + birthyear + firstname
@@ -90,6 +91,11 @@ class Record(dsl.DocType):
     w_occuppotn2 = dsl.Keyword()
     w_filenumber = dsl.Keyword()
     
+    #class Index:
+    #    name = ???
+    # We could define Index here but we don't because we want to be consistent
+    # with ddr-local and ddr-public.
+    
     class Meta:
         doc_type = DOC_TYPE
     
@@ -101,26 +107,33 @@ class Record(dsl.DocType):
         return ':'.join([m_dataset, m_pseudoid])
     
     @staticmethod
-    def from_dict(indexname, fieldnames, m_dataset, m_pseudoid, data):
+    def from_dict(fieldnames, m_dataset, m_pseudoid, data):
         """
-        @param indexname: str
         @param fieldnames: list
         @param m_dataset: str
         @param m_pseudoid: str
         @param data: dict
         @returns: Record
         """
+        # Elasticsearch 7 chokes on empty ('') dates so remove from rowd
+        empty_dates = [
+            fieldname for fieldname,val in data.items()
+            if ('date' in fieldname) and (val == '')
+        ]
+        for fieldname in empty_dates:
+            data.pop(fieldname)
+        # set values
         record = Record(meta={
-            'index': indexname,
             'id': Record.make_id(m_dataset, m_pseudoid)
         })
         record.errors = []
         for field in fieldnames:
-            try:
-                setattr(record, field, data[field])
-            except dsl.exceptions.ValidationException:
-                err = ':'.join([field, data[field]])
-                record.errors.append(err)
+            if data.get(field):
+                try:
+                    setattr(record, field, data[field])
+                except dsl.exceptions.ValidationException:
+                    err = ':'.join([field, data[field]])
+                    record.errors.append(err)
         record.m_dataset = m_dataset
         return record
     
