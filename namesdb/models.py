@@ -8,15 +8,12 @@ import os
 import sys
 
 from elasticsearch.exceptions import NotFoundError
-from elasticsearch_dsl import Index
-from elasticsearch_dsl import DocType, String, Date, Nested, Boolean, analysis
-from elasticsearch_dsl import Search
-from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.exceptions import ValidationException
+import elasticsearch_dsl as dsl
 
 from . import definitions
 
 DOC_TYPE = 'names-record'
+
 
 def _hitvalue(hit, field):
     """Extract list-wrapped values from their lists.
@@ -36,63 +33,68 @@ def _hitvalue(hit, field):
     return None
 
 
-class Record(DocType):
+class Record(dsl.Document):
     """FAR/WRA record model
     
     m_pseudoid = m_camp + lastname + birthyear + firstname
     """
-    m_pseudoid = String(index='not_analyzed')
-    m_dataset = String(index='not_analyzed')
-    m_camp = String(index='not_analyzed')
-    m_lastname = String()
-    m_firstname = String()
-    m_birthyear = String(index='not_analyzed')
-    m_gender = String(index='not_analyzed')
-    m_familyno = String(index='not_analyzed')
-    m_individualno = String(index='not_analyzed')
-    m_originalstate = String(index='not_analyzed')
-    errors = String()
+    m_pseudoid = dsl.Keyword()
+    m_dataset = dsl.Keyword()
+    m_camp = dsl.Keyword()
+    m_lastname = dsl.Text()
+    m_firstname = dsl.Text()
+    m_birthyear = dsl.Keyword()
+    m_gender = dsl.Keyword()
+    m_familyno = dsl.Keyword()
+    m_individualno = dsl.Keyword()
+    m_originalstate = dsl.Keyword()
+    errors = dsl.Text()
     
-    f_originalcity = String(index='not_analyzed')
-    f_othernames = String(index='not_analyzed')
-    f_maritalstatus = String(index='not_analyzed')
-    f_citizenship = String(index='not_analyzed')
-    f_alienregistration = String(index='not_analyzed')
-    f_entrytype = String(index='not_analyzed')
-    f_entrydate = Date()
-    f_departuretype = String(index='not_analyzed')
-    f_departuredate = Date()
-    f_destinationstate = String(index='not_analyzed')
-    f_destinationcity = String(index='not_analyzed')
-    f_campaddress = String(index='not_analyzed')
-    f_farlineid = String(index='not_analyzed')
+    f_originalcity = dsl.Keyword()
+    f_othernames = dsl.Keyword()
+    f_maritalstatus = dsl.Keyword()
+    f_citizenship = dsl.Keyword()
+    f_alienregistration = dsl.Keyword()
+    f_entrytype = dsl.Keyword()
+    f_entrydate = dsl.Date()
+    f_departuretype = dsl.Keyword()
+    f_departuredate = dsl.Date()
+    f_destinationstate = dsl.Keyword()
+    f_destinationcity = dsl.Keyword()
+    f_campaddress = dsl.Keyword()
+    f_farlineid = dsl.Keyword()
     
-    w_assemblycenter = String(index='not_analyzed')
-    w_originaladdress = String(index='not_analyzed')
-    w_birthcountry = String(index='not_analyzed')
-    w_fatheroccup = String(index='not_analyzed')
-    w_fatheroccupcat = String(index='not_analyzed')
-    w_yearsschooljapan = String(index='not_analyzed')
-    w_gradejapan = String(index='not_analyzed')
-    w_schooldegree = String(index='not_analyzed')
-    w_yearofusarrival = String(index='not_analyzed')
-    w_timeinjapan = String(index='not_analyzed')
-    w_notimesinjapan = String(index='not_analyzed')
-    w_ageinjapan = String(index='not_analyzed')
-    w_militaryservice = String(index='not_analyzed')
-    w_maritalstatus = String(index='not_analyzed')
-    w_ethnicity = String(index='not_analyzed')
-    w_birthplace = String(index='not_analyzed')
-    w_citizenshipstatus = String(index='not_analyzed')
-    w_highestgrade = String(index='not_analyzed')
-    w_language = String(index='not_analyzed')
-    w_religion = String(index='not_analyzed')
-    w_occupqual1 = String(index='not_analyzed')
-    w_occupqual2 = String(index='not_analyzed')
-    w_occupqual3 = String(index='not_analyzed')
-    w_occuppotn1 = String(index='not_analyzed')
-    w_occuppotn2 = String(index='not_analyzed')
-    w_filenumber = String(index='not_analyzed')
+    w_assemblycenter = dsl.Keyword()
+    w_originaladdress = dsl.Keyword()
+    w_birthcountry = dsl.Keyword()
+    w_fatheroccup = dsl.Keyword()
+    w_fatheroccupcat = dsl.Keyword()
+    w_yearsschooljapan = dsl.Keyword()
+    w_gradejapan = dsl.Keyword()
+    w_schooldegree = dsl.Keyword()
+    w_yearofusarrival = dsl.Keyword()
+    w_timeinjapan = dsl.Keyword()
+    w_notimesinjapan = dsl.Keyword()
+    w_ageinjapan = dsl.Keyword()
+    w_militaryservice = dsl.Keyword()
+    w_maritalstatus = dsl.Keyword()
+    w_ethnicity = dsl.Keyword()
+    w_birthplace = dsl.Keyword()
+    w_citizenshipstatus = dsl.Keyword()
+    w_highestgrade = dsl.Keyword()
+    w_language = dsl.Keyword()
+    w_religion = dsl.Keyword()
+    w_occupqual1 = dsl.Keyword()
+    w_occupqual2 = dsl.Keyword()
+    w_occupqual3 = dsl.Keyword()
+    w_occuppotn1 = dsl.Keyword()
+    w_occuppotn2 = dsl.Keyword()
+    w_filenumber = dsl.Keyword()
+    
+    #class Index:
+    #    name = ???
+    # We could define Index here but we don't because we want to be consistent
+    # with ddr-local and ddr-public.
     
     class Meta:
         doc_type = DOC_TYPE
@@ -105,26 +107,33 @@ class Record(DocType):
         return ':'.join([m_dataset, m_pseudoid])
     
     @staticmethod
-    def from_dict(indexname, fieldnames, m_dataset, m_pseudoid, data):
+    def from_dict(fieldnames, m_dataset, m_pseudoid, data):
         """
-        @param indexname: str
         @param fieldnames: list
         @param m_dataset: str
         @param m_pseudoid: str
         @param data: dict
         @returns: Record
         """
+        # Elasticsearch 7 chokes on empty ('') dates so remove from rowd
+        empty_dates = [
+            fieldname for fieldname,val in data.items()
+            if ('date' in fieldname) and (val == '')
+        ]
+        for fieldname in empty_dates:
+            data.pop(fieldname)
+        # set values
         record = Record(meta={
-            'index': indexname,
             'id': Record.make_id(m_dataset, m_pseudoid)
         })
         record.errors = []
         for field in fieldnames:
-            try:
-                setattr(record, field, data[field])
-            except ValidationException:
-                err = ':'.join([field, data[field]])
-                record.errors.append(err)
+            if data.get(field):
+                try:
+                    setattr(record, field, data[field])
+                except dsl.exceptions.ValidationException:
+                    err = ':'.join([field, data[field]])
+                    record.errors.append(err)
         record.m_dataset = m_dataset
         return record
     
@@ -152,9 +161,9 @@ class Record(DocType):
         """Returns unique values and counts for specified field.
         """
         if es and index:
-            s = Search(using=es, index=index)
+            s = dsl.Search(using=es, index=index)
         else:
-            s = Search()
+            s = dsl.Search()
         s = s.doc_type(Record)
         s.aggs.bucket('bucket', 'terms', field=field, size=1000)
         response = s.execute()
