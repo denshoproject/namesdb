@@ -83,7 +83,11 @@ def make_rowd(headers, row, dataset=None):
     return rowd
 
 def load_records(dataset, fields, headers, rows):
+    """
+    @returns: (records, defective_rows) where each defective_row = (n, err, row)
+    """
     records = []
+    defective_rows = []
     num_rows = len(rows)
     n = 0
     while rows:
@@ -93,10 +97,14 @@ def load_records(dataset, fields, headers, rows):
             rowd = make_rowd(headers, row, dataset)
         else:
             rowd = make_rowd(headers, row)
-        record = models.Record.from_dict(fields, dataset, rowd['m_pseudoid'], rowd)
-        logging.info('Loading %s/%s %s' % (n, num_rows, record))
-        records.append(record)
-    return records
+        rowd['n'] = n
+        try:
+            record = models.Record.from_dict(fields, dataset, rowd['m_pseudoid'], rowd)
+            logging.info('Loading %s/%s %s' % (n, num_rows, record))
+            records.append(record)
+        except Exception as err:
+            defective_rows.append((n,err,row))
+    return records,defective_rows
 
 def find_errors(records):
     return [r for r in records if r.errors]
@@ -152,8 +160,12 @@ def import_records(ds, dataset, stop, csvpath):
     headers = map_headers(header_row)
     
     logging.info('Loading records')
-    records = load_records(dataset, fields, headers, rows)
+    records,defective_rows = load_records(dataset, fields, headers, rows)
     logging.info('Loaded %s records' % len(records))
+    if defective_rows:
+        logging.error('Defective rows: {}'.format(len(defective_rows)))
+        for n,err,row in defective_rows:
+            logging.error('| row:%s ERROR:"%s" ROW: %s' % (n, err, row))
     
     logging.info('Checking for errors')
     record_errors = find_errors(records)
@@ -169,6 +181,11 @@ def import_records(ds, dataset, stop, csvpath):
     
     logging.info('Writing to Elasticsearch')
     write_records(ds, indexname, records)
+
+    if defective_rows:
+        logging.error('Defective rows: {}'.format(len(defective_rows)))
+        for n,err,row in defective_rows:
+            logging.error('| row:%s ERROR:"%s" ROW: %s' % (n, err, row))
     
     if record_errors:
         logging.error(record_errors_msg)
