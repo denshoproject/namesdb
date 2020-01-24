@@ -91,6 +91,8 @@ class Record(dsl.Document):
     w_occuppotn2 = dsl.Keyword()
     w_filenumber = dsl.Keyword()
     
+    fulltext = dsl.Text()  # see Record.assemble_fulltext()
+    
     #class Index:
     #    name = ???
     # We could define Index here but we don't because we want to be consistent
@@ -135,6 +137,7 @@ class Record(dsl.Document):
                     err = ':'.join([field, data[field]])
                     record.errors.append(err)
         record.m_dataset = m_dataset
+        record.assemble_fulltext()
         return record
     
     @staticmethod
@@ -153,7 +156,9 @@ class Record(dsl.Document):
             for field in definitions.FIELDS_MASTER:
                 setattr(record, field, _hitvalue(hit_d, field))
             record.m_dataset = m_dataset
+            record.assemble_fulltext()
             return record
+        record.assemble_fulltext()
         return None
      
     @staticmethod
@@ -171,3 +176,64 @@ class Record(dsl.Document):
             (x['key'], x['doc_count'])
             for x in response.aggregations['bucket']['buckets']
         ]
+        
+    def assemble_fulltext(self):
+        """Assembles single fulltext search field from all string fields
+        """
+        fields = [
+            self.m_pseudoid,
+            self.m_dataset,
+            self.m_camp,
+            self.m_lastname,
+            self.m_firstname,
+            self.m_birthyear,
+            self.m_gender,
+            self.m_familyno,
+            self.m_individualno,
+            self.m_originalstate,
+            self.f_originalcity,
+            self.f_othernames,
+            self.f_maritalstatus,
+            self.f_citizenship,
+            self.f_alienregistration,
+            self.f_entrytype,
+            self.f_entrydate,
+            #self.f_entrydate.isoformat(),              # multiple data formats
+            #self.f_entrydate.strftime('%d-%m-%Y'),     #
+            #self.f_entrydate.strftime('%m-%d-%Y'),     #
+            self.f_departuretype,
+            self.f_departuredate,
+            self.f_destinationstate,
+            self.f_destinationcity,
+            self.f_campaddress,
+            self.f_farlineid,
+            self.w_assemblycenter,
+            self.w_originaladdress,
+            self.w_birthcountry,
+            self.w_fatheroccup,
+            self.w_fatheroccupcat,
+            self.w_yearsschooljapan,
+            self.w_gradejapan,
+            self.w_schooldegree,
+            self.w_yearofusarrival,
+            self.w_timeinjapan,
+            self.w_notimesinjapan,
+            self.w_ageinjapan,
+            self.w_militaryservice,
+            self.w_maritalstatus,
+            self.w_ethnicity,
+            self.w_birthplace,
+            self.w_citizenshipstatus,
+            self.w_highestgrade,
+            self.w_language,
+            self.w_religion,
+            self.w_occupqual1,
+            self.w_occupqual2,
+            self.w_occupqual3,
+            self.w_occuppotn1,
+            self.w_occuppotn2,
+            self.w_filenumber,
+        ]
+        self.fulltext = ' '.join([
+            f.lower() for f in fields if isinstance(f, str)
+        ])

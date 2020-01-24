@@ -560,4 +560,5 @@ FIELD_DEFINITIONS_NAMES_STRINGS = [
 SEARCH_FIELDS = [
     'm_dataset', 'm_pseudoid', 'm_camp', 'm_lastname', 'm_firstname', 'm_gender',
     'm_birthyear', 'm_originalstate', 'm_familyno', 'm_individualno',
+    'fulltext',
 ]
