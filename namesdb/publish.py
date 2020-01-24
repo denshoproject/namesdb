@@ -99,7 +99,9 @@ def load_records(dataset, fields, headers, rows):
             rowd = make_rowd(headers, row)
         rowd['n'] = n
         try:
-            record = models.Record.from_dict(fields, dataset, rowd['m_pseudoid'], rowd)
+            record = models.Record.from_dict(
+                fields, dataset, rowd['m_pseudoid'], rowd
+            )
             logging.info('Loading %s/%s %s' % (n, num_rows, record))
             records.append(record)
         except Exception as err:
