@@ -129,21 +129,33 @@ def status(hosts):
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
 @click.option('--dataset','-d', help='Dataset name (if not in filename).')
+@click.option('--ids','-i', help='Comma-separated list of record IDs to post.')
 @click.option('--stop','-s', is_flag=True, help='Stop if errors detected.')
 @click.argument('csvpath') # Absolute path to CSV file (named ${dataset}.csv).
-def post(hosts, dataset, stop, csvpath):
+def post(hosts, dataset, ids, stop, csvpath):
     """Read records from CSV file and push to Elasticsearch.
     
+    \b
     In normal usage the filename should consist of dataset plus .csv:
-        $ namesdb import -H localhost:9200 /tmp/namesdb-data/far-manzanar.csv
+        $ namesdb post -h localhost:9200 /tmp/namesdb-data/far-manzanar.csv
     
+    \b
     If filename does not contain the dataset name, specify using -d/--dataset:
-        $ namesdb import -H localhost:9200 -d far-manzanar /tmp/random-file.csv
+        $ namesdb post -h localhost:9200 -d far-manzanar /tmp/random-file.csv
+
+    \b
+    Process only specified IDs using --ids:
+        $ namesdb post far-ancestry.csv -i 1-topaz_hirabayashi_1890_george
     """
     hosts = hosts_index(hosts)
     ds = docstore.Docstore(hosts)
-    publish.import_records(ds, dataset, stop, csvpath)
-
+    # --ids
+    if ids and isinstance(ids, str):
+        record_ids = ids.replace(' ','').split(',')
+    else:
+        record_ids = []
+    # ok go
+    publish.import_records(ds, dataset, stop, csvpath, record_ids=ids)
 
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
