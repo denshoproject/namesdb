@@ -82,7 +82,7 @@ def make_rowd(headers, row, dataset=None):
         rowd['dataset'] = dataset
     return rowd
 
-def load_records(dataset, fields, headers, rows):
+def load_records(dataset, fields, headers, rows, record_ids=[]):
     """
     @returns: (records, defective_rows) where each defective_row = (n, err, row)
     """
@@ -97,15 +97,25 @@ def load_records(dataset, fields, headers, rows):
             rowd = make_rowd(headers, row, dataset)
         else:
             rowd = make_rowd(headers, row)
-        rowd['n'] = n
-        try:
-            record = models.Record.from_dict(
-                fields, dataset, rowd['m_pseudoid'], rowd
-            )
-            logging.info('Loading %s/%s %s' % (n, num_rows, record))
-            records.append(record)
-        except Exception as err:
-            defective_rows.append((n,err,row))
+        # decide
+        if record_ids:
+            if (rowd['m_pseudoid'] in record_ids):
+                load_this = True
+            else:
+                load_this = False
+        else:
+            load_this = True
+        # load and include
+        if load_this:
+            rowd['n'] = n
+            try:
+                record = models.Record.from_dict(
+                    fields, dataset, rowd['m_pseudoid'], rowd
+                )
+                logging.info('Loading %s/%s %s' % (n, num_rows, record))
+                records.append(record)
+            except Exception as err:
+                defective_rows.append((n,err,row))
     return records,defective_rows
 
 def find_errors(records):
@@ -120,7 +130,7 @@ def write_records(ds, indexname, records):
         logging.info('Saving %s/%s %s' % (n, num_rows, record))
         result = record.save(index=indexname, using=ds.es)
 
-def import_records(ds, dataset, stop, csvpath):
+def import_records(ds, dataset, stop, csvpath, record_ids=[]):
     doctype = 'record'
     ES_Class = docstore.ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
     indexname = ds.index_name(doctype)
@@ -162,7 +172,7 @@ def import_records(ds, dataset, stop, csvpath):
     headers = map_headers(header_row)
     
     logging.info('Loading records')
-    records,defective_rows = load_records(dataset, fields, headers, rows)
+    records,defective_rows = load_records(dataset, fields, headers, rows, record_ids)
     logging.info('Loaded %s records' % len(records))
     if defective_rows:
         logging.error('Defective rows: {}'.format(len(defective_rows)))
