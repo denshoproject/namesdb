@@ -21,10 +21,11 @@ Sample usage:
     $ namesdb search -H localhost:9200 "George Takei"
     $ namesdb search -H localhost:9200 7-manzanar_zoriki_1922_masayuki
 
-Note: You can set environment variables for HOSTS and INDEX.:
+Note: You can set environment variables for Elasticsearch:
 
     $ export ES_HOSTS=localhost:9200
-    $ export ES_INDEX=namesdb-dev
+    $ export ES_SSL_CERT=/etc/ddr/elasticsearch-ca.pem
+    $ export ES_PASSWORD=REDACTED
 
 """
 
@@ -66,18 +67,22 @@ def hosts_index(hosts):
 
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
-def create(hosts):
+@click.option('--sslcert','-S', envvar='ES_SSL_CERT', help='(optional) Elasticsearch SSL cert file.')
+@click.option('--password','-P', envvar='ES_PASSWORD', help='(optional) Elasticsearch password.')
+def create(hosts, sslcert, password):
     """Create specified Elasticsearch index and upload mappings.
     """
     hosts = hosts_index(hosts)
-    docstore.Docstore(hosts).create_indices()
+    docstore.Docstore(hosts, sslcert, password).create_indices()
 
 
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
+@click.option('--sslcert','-S', envvar='ES_SSL_CERT', help='(optional) Elasticsearch SSL cert file.')
+@click.option('--password','-P', envvar='ES_PASSWORD', help='(optional) Elasticsearch password.')
 @click.option('--confirm', is_flag=True,
               help='Yes I really want to delete this index.')
-def destroy(hosts, confirm):
+def destroy(hosts, sslcert, password, confirm):
     """Destroy specified Elasticsearch index and all its records.
     
     Think twice before you do this, then think again.
@@ -90,19 +95,21 @@ def destroy(hosts, confirm):
     """
     if confirm:
         hosts = hosts_index(hosts)
-        docstore.Docstore(hosts).delete_indices()
+        docstore.Docstore(hosts, sslcert, password).delete_indices()
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
 
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
-def status(hosts):
+@click.option('--sslcert','-S', envvar='ES_SSL_CERT', help='(optional) Elasticsearch SSL cert file.')
+@click.option('--password','-P', envvar='ES_PASSWORD', help='(optional) Elasticsearch password.')
+def status(hosts, sslcert, password):
     """Print status info.
     
     More detail since you asked.
     """
-    ds = docstore.Docstore(hosts)
+    ds = docstore.Docstore(hosts, sslcert, password)
     s = ds.status()
     
     print('------------------------------------------------------------------------',0)
@@ -128,17 +135,19 @@ def status(hosts):
 
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
+@click.option('--sslcert','-S', envvar='ES_SSL_CERT', help='(optional) Elasticsearch SSL cert file.')
+@click.option('--password','-P', envvar='ES_PASSWORD', help='(optional) Elasticsearch password.')
 @click.option('--dataset','-d', help='Dataset name (if not in filename).')
 @click.option('--ids','-i', help='Comma-separated list of record IDs to post.')
 @click.option('--stop','-s', is_flag=True, help='Stop if errors detected.')
 @click.argument('csvpath') # Absolute path to CSV file (named ${dataset}.csv).
-def post(hosts, dataset, ids, stop, csvpath):
+def post(hosts, sslcert, password, dataset, ids, stop, csvpath):
     """Read records from CSV file and push to Elasticsearch.
     
     \b
     In normal usage the filename should consist of dataset plus .csv:
-        $ namesdb post -h localhost:9200 /tmp/namesdb-data/far-manzanar.csv
-    
+        $ namesdb post -h localhost:9200 /opt/namesdb-data/0.1/far-manzanar.csv
+
     \b
     If filename does not contain the dataset name, specify using -d/--dataset:
         $ namesdb post -h localhost:9200 -d far-manzanar /tmp/random-file.csv
@@ -148,7 +157,7 @@ def post(hosts, dataset, ids, stop, csvpath):
         $ namesdb post far-ancestry.csv -i 1-topaz_hirabayashi_1890_george
     """
     hosts = hosts_index(hosts)
-    ds = docstore.Docstore(hosts)
+    ds = docstore.Docstore(hosts, sslcert, password)
     # --ids
     if ids and isinstance(ids, str):
         record_ids = ids.replace(' ','').split(',')
@@ -159,8 +168,10 @@ def post(hosts, dataset, ids, stop, csvpath):
 
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
+@click.option('--sslcert','-S', envvar='ES_SSL_CERT', help='(optional) Elasticsearch SSL cert file.')
+@click.option('--password','-P', envvar='ES_PASSWORD', help='(optional) Elasticsearch password.')
 @click.argument('csvpath') # Absolute path to CSV file (named ${dataset}.csv).
-def delete(hosts):
+def delete(hosts, sslcert, password):
     """Delete records in CSV file from Elasticsearch.
     
     Use this function to delete all records for a given dataset by pointing
@@ -169,13 +180,16 @@ def delete(hosts):
     header "m_pseudoid".
     """
     hosts = hosts_index(hosts)
-    publish.delete_records(hosts, args)
+    ds = docstore.Docstore(hosts, sslcert, password)
+    publish.delete_records(ds, args)
 
 
 @namesdb.command()
 @click.option('--hosts','-H', envvar='ES_HOST', help='Elasticsearch hosts.')
+@click.option('--sslcert','-S', envvar='ES_SSL_CERT', help='(optional) Elasticsearch SSL cert file.')
+@click.option('--password','-P', envvar='ES_PASSWORD', help='(optional) Elasticsearch password.')
 @click.argument('query') # Search query.
-def search(hosts, query):
+def search(hosts, sslcert, password, query):
     """Perform search query, return results in raw JSON.
     
     Whatever text follows the HOST and INDEX args will be pasted directly into
@@ -187,7 +201,8 @@ def search(hosts, query):
         $ namesdb search -H localhost:9200 7-manzanar_zoriki_1922_masayuki
     """
     hosts = hosts_index(hosts)
-    publish.search(hosts, query)
+    ds = docstore.Docstore(hosts, sslcert, password)
+    publish.search(ds, query)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger(__name__)
+from ssl import create_default_context
 
 from elasticsearch import Elasticsearch, TransportError
 import elasticsearch_dsl
@@ -19,19 +20,46 @@ ELASTICSEARCH_CLASSES_BY_MODEL = {
     'record': models.Record,
 }
 
+def get_elasticsearch(host, ssl_certfile, password):
+    USERNAME = 'elastic'
+    # TODO simplify this once everything is using SSL/passwords
+    if ssl_certfile and password:
+        context = create_default_context(cafile=ssl_certfile)
+        context.check_hostname = False
+        return Elasticsearch(
+            host,
+            scheme='https', ssl_context=context,
+            port=9200,
+            http_auth=(USERNAME, password),
+        )
+    elif ssl_certfile:
+        context = create_default_context(cafile=ssl_certfile)
+        context.check_hostname = False
+        return Elasticsearch(
+            host,
+            scheme='https', ssl_context=context,
+            port=9200,
+        )
+    else:
+        return Elasticsearch(
+            host,
+            scheme='http',
+            port=9200,
+        )
+
 
 class Docstore():
     hosts = None
     facets = None
     es = None
 
-    def __init__(self, hosts, connection=None):
+    def __init__(self, hosts, ssl_certfile, password, connection=None):
         self.hosts = hosts
         if connection:
             self.es = connection
         else:
-            self.es = Elasticsearch(hosts, timeout=DOCSTORE_TIMEOUT)
-    
+            self.es = get_elasticsearch(hosts, ssl_certfile, password)
+
     def index_name(self, model):
         return '{}{}'.format(INDEX_PREFIX, model)
     
