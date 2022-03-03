@@ -212,13 +212,13 @@ def import_records(ds, dataset, stop, csvpath, record_ids=[]):
 
 # delete records -------------------------------------------------------
 
-def delete_records(hosts):
+def delete_records(ds):
     logging.error('NOT IMPLEMENTED YET')
 
 
 # search ---------------------------------------------------------------
 
-def search(hosts, query):
+def search(ds, query):
     logging.info('query: "%s"' % query)
     
     s = Search().doc_type(models.Record)

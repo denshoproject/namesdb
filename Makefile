@@ -4,7 +4,7 @@ DEBIAN_CODENAME := $(shell lsb_release -sc)
 PACKAGE_SERVER=tank.densho.org
 
 PIP_CACHE_DIR=/opt/pip-cache
-INSTALLDIR=/opt/namesdb
+INSTALLDIR=/opt/ddr-public/namesdb
 VIRTUALENV=$(INSTALLDIR)/venv/namesdb
 
 ELASTICSEARCH=elasticsearch-2.4.6.deb
@@ -117,13 +117,28 @@ docs:
 # 	python setup.py bdist_wheel
 # 	ls -l dist
 
-install: clean
+install-virtualenv:
+	@echo ""
+	@echo "install-virtualenv -----------------------------------------------------"
+	apt-get --assume-yes install python3-pip python3-venv
+	python3 -m venv $(VIRTUALENV)
+	source $(VIRTUALENV)/bin/activate; \
+	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) pip
+
+install-setuptools: install-virtualenv
+	@echo ""
+	@echo "install-setuptools -----------------------------------------------------"
+	apt-get --assume-yes install python3-dev
+	source $(VIRTUALENV)/bin/activate; \
+	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) setuptools
+
+install: clean install-setuptools
 # virtualenv
 	test -d $(VIRTUALENV) || virtualenv --python=python3 --distribute --setuptools $(VIRTUALENV)
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --download-cache=$(PIP_CACHE_DIR) bpython setuptools appdirs packaging pyparsing six
+	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) bpython setuptools appdirs packaging pyparsing six
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --download-cache=$(PIP_CACHE_DIR) -r $(INSTALLDIR)/requirements.txt
+	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) -r $(INSTALLDIR)/requirements.txt
 	source $(VIRTUALENV)/bin/activate; \
 	python setup.py install
 
