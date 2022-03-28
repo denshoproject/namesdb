@@ -48,6 +48,7 @@ class Settings():
     def __init__(self, host, sslcert, password):
         self.DOCSTORE_HOST = host
         self.DOCSTORE_SSL_CERTFILE = sslcert
+        self.DOCSTORE_USERNAME = 'elastic'
         self.DOCSTORE_PASSWORD = password
         print(f'self.DOCSTORE_HOST         {self.DOCSTORE_HOST}')
         print(f'self.DOCSTORE_SSL_CERTFILE {self.DOCSTORE_SSL_CERTFILE}')
