@@ -5,6 +5,7 @@ from ssl import create_default_context
 from elasticsearch import Elasticsearch, TransportError
 import elasticsearch_dsl
 
+from elastictools import docstore
 from . import models
 
 DOCSTORE_TIMEOUT = 5
@@ -20,94 +21,17 @@ ELASTICSEARCH_CLASSES_BY_MODEL = {
     'record': models.Record,
 }
 
-def get_elasticsearch(host, ssl_certfile, password):
-    USERNAME = 'elastic'
-    # TODO simplify this once everything is using SSL/passwords
-    if ssl_certfile and password:
-        context = create_default_context(cafile=ssl_certfile)
-        context.check_hostname = False
-        return Elasticsearch(
-            host,
-            scheme='https', ssl_context=context,
-            port=9200,
-            http_auth=(USERNAME, password),
-        )
-    elif ssl_certfile:
-        context = create_default_context(cafile=ssl_certfile)
-        context.check_hostname = False
-        return Elasticsearch(
-            host,
-            scheme='https', ssl_context=context,
-            port=9200,
-        )
-    else:
-        return Elasticsearch(
-            host,
-            scheme='http',
-            port=9200,
-        )
 
+class Docstore(docstore.Docstore):
 
-class Docstore():
-    hosts = None
-    facets = None
-    es = None
-
-    def __init__(self, hosts, ssl_certfile, password, connection=None):
-        self.hosts = hosts
+    def __init__(self, index_prefix, host, settings, connection=None):
+        self.index_prefix = index_prefix
+        self.host = host
         if connection:
             self.es = connection
         else:
-            self.es = get_elasticsearch(hosts, ssl_certfile, password)
+            self.es = docstore.get_elasticsearch(settings)
 
-    def index_name(self, model):
-        return '{}{}'.format(INDEX_PREFIX, model)
-    
-    def __repr__(self):
-        return "<%s.%s %s:%s*>" % (
-            self.__module__, self.__class__.__name__, self.hosts, INDEX_PREFIX
-        )
-    
-    def health(self):
-        return self.es.cluster.health()
-    
-    def index_exists(self, indexname):
-        """
-        """
-        return self.es.indices.exists(index=indexname)
-    
-    def status(self):
-        """Returns status information from the Elasticsearch cluster.
-        
-        >>> docstore.Docstore().status()
-        {
-            u'indices': {
-                u'ddrpublic-dev': {
-                    u'total': {
-                        u'store': {
-                            u'size_in_bytes': 4438191,
-                            u'throttle_time_in_millis': 0
-                        },
-                        u'docs': {
-                            u'max_doc': 2664,
-                            u'num_docs': 2504,
-                            u'deleted_docs': 160
-                        },
-                        ...
-                    },
-                    ...
-                }
-            },
-            ...
-        }
-        """
-        return self.es.indices.stats()
-    
-    def index_names(self):
-        """Returns list of index names
-        """
-        return [name for name in self.status()['indices'].keys()]
-    
     def create_indices(self):
         """Create indices for each model defined in namesdb/models.py
         
