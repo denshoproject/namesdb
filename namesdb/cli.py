@@ -23,7 +23,7 @@ Sample usage:
 
 Note: You can set environment variables for Elasticsearch:
 
-    $ export ES_HOSTS=localhost:9200
+    $ export ES_HOST=localhost:9200
     $ export ES_SSL_CERT=/etc/ddr/elasticsearch-ca.pem
     $ export ES_PASSWORD=REDACTED
 
@@ -37,13 +37,28 @@ import click
 from . import docstore
 from . import publish
 
+INDEX_PREFIX = docstore.INDEX_PREFIX
+
+
+class Settings():
+    DOCSTORE_HOST = ''
+    DOCSTORE_SSL_CERTFILE = ''
+    DOCSTORE_PASSWORD = ''
+
+    def __init__(self, host, sslcert, password):
+        self.DOCSTORE_HOST = host
+        self.DOCSTORE_SSL_CERTFILE = sslcert
+        self.DOCSTORE_PASSWORD = password
+        print(f'self.DOCSTORE_HOST         {self.DOCSTORE_HOST}')
+        print(f'self.DOCSTORE_SSL_CERTFILE {self.DOCSTORE_SSL_CERTFILE}')
+        print(f'self.DOCSTORE_PASSWORD     {self.DOCSTORE_PASSWORD}')
 
 
 @click.group()
 @click.option('--debug','-d', is_flag=True, default=False)
 def namesdb(debug):
     """namesdb - Uploads FAR and WRA records from CSV to Elasticsearch.
-    
+
     \b
     See "namesdb help" for examples.
     """
@@ -72,8 +87,9 @@ def hosts_index(hosts):
 def create(hosts, sslcert, password):
     """Create specified Elasticsearch index and upload mappings.
     """
-    hosts = hosts_index(hosts)
-    docstore.Docstore(hosts, sslcert, password).create_indices()
+    settings = Settings(hosts, sslcert, password)
+    ds = docstore.Docstore(INDEX_PREFIX, hosts, settings)
+    ds.create_indices()
 
 
 @namesdb.command()
@@ -84,18 +100,19 @@ def create(hosts, sslcert, password):
               help='Yes I really want to delete this index.')
 def destroy(hosts, sslcert, password, confirm):
     """Destroy specified Elasticsearch index and all its records.
-    
+
     Think twice before you do this, then think again.
     """
     """Delete indices (requires --confirm).
-    
+
     \b
     It's meant to sound serious. Also to not clash with 'delete', which
     is for individual documents.
     """
     if confirm:
-        hosts = hosts_index(hosts)
-        docstore.Docstore(hosts, sslcert, password).delete_indices()
+        settings = Settings(hosts, sslcert, password)
+        ds = docstore.Docstore(INDEX_PREFIX, hosts, settings)
+        ds.delete_indices()
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
@@ -109,9 +126,10 @@ def status(hosts, sslcert, password):
     
     More detail since you asked.
     """
-    ds = docstore.Docstore(hosts, sslcert, password)
-    s = ds.status()
-    
+    settings = Settings(hosts, sslcert, password)
+    ds = docstore.Docstore(INDEX_PREFIX, hosts, settings)
+    ds.status()
+
     print('------------------------------------------------------------------------',0)
     print('Elasticsearch')
     # config file
@@ -156,8 +174,8 @@ def post(hosts, sslcert, password, dataset, ids, stop, csvpath):
     Process only specified IDs using --ids:
         $ namesdb post far-ancestry.csv -i 1-topaz_hirabayashi_1890_george
     """
-    hosts = hosts_index(hosts)
-    ds = docstore.Docstore(hosts, sslcert, password)
+    settings = Settings(hosts, sslcert, password)
+    ds = docstore.Docstore(INDEX_PREFIX, hosts, settings)
     # --ids
     if ids and isinstance(ids, str):
         record_ids = ids.replace(' ','').split(',')
@@ -179,8 +197,8 @@ def delete(hosts, sslcert, password):
     containing a single column containing NamesDB pseudo IDs, having the column
     header "m_pseudoid".
     """
-    hosts = hosts_index(hosts)
-    ds = docstore.Docstore(hosts, sslcert, password)
+    settings = Settings(hosts, sslcert, password)
+    ds = docstore.Docstore(INDEX_PREFIX, hosts, settings)
     publish.delete_records(ds, args)
 
 
@@ -200,8 +218,8 @@ def search(hosts, sslcert, password, query):
         $ namesdb search -H localhost:9200 "George Takei"
         $ namesdb search -H localhost:9200 7-manzanar_zoriki_1922_masayuki
     """
-    hosts = hosts_index(hosts)
-    ds = docstore.Docstore(hosts, sslcert, password)
+    settings = Settings(hosts, sslcert, password)
+    ds = docstore.Docstore(INDEX_PREFIX, hosts, settings)
     publish.search(ds, query)
 
 
