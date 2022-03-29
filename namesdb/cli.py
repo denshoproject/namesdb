@@ -50,9 +50,6 @@ class Settings():
         self.DOCSTORE_SSL_CERTFILE = sslcert
         self.DOCSTORE_USERNAME = 'elastic'
         self.DOCSTORE_PASSWORD = password
-        print(f'self.DOCSTORE_HOST         {self.DOCSTORE_HOST}')
-        print(f'self.DOCSTORE_SSL_CERTFILE {self.DOCSTORE_SSL_CERTFILE}')
-        print(f'self.DOCSTORE_PASSWORD     {self.DOCSTORE_PASSWORD}')
 
 
 @click.group()
