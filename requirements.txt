@@ -1,3 +1,5 @@
-Click==7.0
+# Debian package dependencies
+# see Makefile task `install`
+# and ddr-public Makefile task `install-namesdb`
 
 git+https://github.com/denshoproject/densho-elastictools.git
