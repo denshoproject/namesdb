@@ -37,3 +37,5 @@ Install Elasticsearch if desired::
 Run the command with the `--help` flag for more usage info and examples::
 
     $ namesdb --help
+
+Names Registry data is in https://github.com/denshoproject/namesdb-data.
