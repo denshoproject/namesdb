@@ -1,0 +1,38 @@
+[project]
+name = "namesdb"
+description = "Densho Names Database"
+authors = [
+    {name = "Geoffrey Jost", email="geoffrey.jost@densho.us"}
+]
+maintainers = [
+    {name = "Geoffrey Jost", email="geoffrey.jost@densho.us"},
+]
+readme = "README.rst"
+#license = {file = "LICENSE"}
+keywords = ["Django", "database",]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
+
+dynamic = ["version"]  # will read __version__ from namesdb/__init__.py
+requires-python = ">=3.13"
+dependencies = [
+    'Click==7.0',
+    "elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.1.3",
+]
+
+[project.optional-dependencies]
+testing = []
+dev = []
+
+[project.urls]
+Repository = "http://github.com/denshoproject/namesdb"
+
+[tool.setuptools]
+packages = ['namesdb']
