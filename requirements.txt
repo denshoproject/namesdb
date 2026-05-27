@@ -1,5 +1,5 @@
-Click==7.0
+click==8.3.3
 elasticsearch>=7.0.0,<8.0.0     # NOTE: match ddrpublic version
 elasticsearch-dsl>=7.0.0,<8.0.0 # NOTE: match ddrpublic version
 
-elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.1.2
+elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.1.3
